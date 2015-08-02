@@ -211,7 +211,8 @@ class Manager
         $tableKeys = [
             'primary' => [],
             'unique' => [],
-            'index' => []
+            'index' => [],
+            'constraints' => [] // Should be passed only to fields configuration.
         ];
         $usedKeyNames = [];
         foreach ($formattedFields as $fieldName => $fieldInfo) {
@@ -239,6 +240,22 @@ class Manager
                 }
                 $tableKeys['index'][$fieldKeyName][] = $fieldName;
                 $usedKeyNames[] = $fieldKeyName;
+            }
+
+            /**
+             * Check if onUpdate option has been passed,
+             * and add it to our array of table keys.
+             */
+            if (isset($fieldInfo['onUpdate'])) {
+                $tableKeys['constraints']['onUpdate'][ $fieldName ] = $fieldInfo['onUpdate'];
+            }
+
+            /**
+             * Check if onDelete option has been passed,
+             * and add it to our array of table keys.
+             */
+            if (isset($fieldInfo['onDelete'])) {
+                $tableKeys['constraints']['onDelete'][ $fieldName ] = $fieldInfo['onDelete'];
             }
         }
 

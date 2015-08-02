@@ -3,6 +3,7 @@ namespace Spot\Query;
 
 use Spot\Mapper;
 use Spot\Query;
+use Spot\Relation;
 
 /**
  * Main query resolver
@@ -102,6 +103,68 @@ class Resolver
         // INDEX
         foreach ($fieldIndexes['index'] as $keyName => $keyFields) {
             $table->addIndex($keyFields, $keyName);
+        }
+
+        // Add foreign key constraints if necessary.
+        $relations = call_user_func(array($entityName, 'relations'), $this->mapper, new $entityName);
+
+        // Skip, if there are no relations added.
+        if (count($relations)) {
+            foreach ($relations as $name => $relation) {
+                /**
+                 * Since OneToMany and ManyToMany are at the inverse side
+                 * of the relations, their purpose is to return a collection
+                 * of entities/objects and there are no foreign keys on this side.
+                 *
+                 * So, we skip those entities, and expect a ManyToOne relation to be
+                 * defined on the owning side.
+                 */
+                if ($relation instanceof Relation\HasMany || $relation instanceof Relation\HasManyThrough) {
+                    continue;
+                }
+
+                $parentEntity = $relation->entityName();
+                $foreignTable = call_user_func([$parentEntity, 'table']);
+
+                $localKey = $relation->localKey();
+                $foreignKey = $relation->foreignKey();
+
+                /**
+                 * Create an empty array that would hold our constraint options.
+                 * By default we can create a foreign key without having to
+                 * passing onDelete/onUpdate clauses, so at the very least,
+                 * an empty array is required.
+                 *
+                 * This array structure should be pairs of "column" => "option"
+                 * <code>
+                 * 	array("onDelete" => "CASCADE", "onUpdate" => "CASCADE")
+                 * </code>
+                 */
+                $constrains = [];
+
+                /**
+                 * Check if onUpdate clause is been added.
+                 * If there is, add it to $constraints array.
+                 */
+                if (isset($fieldIndexes['constraints']['onUpdate'])) {
+                    if (array_key_exists($localKey, $fieldIndexes['constraints']['onUpdate'])) {
+                        $constrains['onUpdate'] = $fieldIndexes['constraints']['onUpdate'][ $localKey ];
+                    }
+                }
+
+                /**
+                 * Check if onDelete clause is been added.
+                 * If there is, add it to $constraints array.
+                 */
+                if (isset($fieldIndexes['constraints']['onDelete'])) {
+                    if (array_key_exists($localKey, $fieldIndexes['constraints']['onDelete'])) {
+                        $constrains['onDelete'] = $fieldIndexes['constraints']['onDelete'][ $localKey ];
+                    }
+                }
+
+                // Create the foreign key.
+                $table->addForeignKeyConstraint($foreignTable, [$localKey], [$foreignKey], $constrains);
+            }
         }
 
         return $schema;
