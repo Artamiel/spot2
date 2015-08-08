@@ -8,16 +8,30 @@ class CRUD extends \PHPUnit_Framework_TestCase
 {
     public static function setupBeforeClass()
     {
-        foreach (['Post', 'Post\Comment', 'Tag', 'PostTag', 'Author', 'Setting'] as $entity) {
+        foreach (['Author', 'Post', 'Post\Comment', 'Tag', 'PostTag', 'Setting'] as $entity) {
             test_spot_mapper('\SpotTest\Entity\\' . $entity)->migrate();
         }
     }
 
     public static function tearDownAfterClass()
     {
-        foreach (['Post', 'Post\Comment', 'Tag', 'PostTag', 'Author', 'Setting'] as $entity) {
+        foreach (['PostTag', 'Post\Comment', 'Post', 'Tag', 'Author', 'Setting'] as $entity) {
             test_spot_mapper('\SpotTest\Entity\\' . $entity)->dropTable();
         }
+    }
+
+    public function testInsertAuthor()
+    {
+        $mapper = test_spot_mapper('SpotTest\Entity\Author');
+        $author = $mapper->get();
+
+        $author->email = 'test@test.com';
+        $author->password = 'password';
+        $author->is_admin = true;
+
+        $result = $mapper->insert($author);
+
+        $this->assertTrue($result !== false);
     }
 
     public function testSampleNewsInsert()
@@ -120,15 +134,26 @@ class CRUD extends \PHPUnit_Framework_TestCase
 
     }
 
+    public function testInsertTag()
+    {
+        $mapper = test_spot_mapper('SpotTest\Entity\Tag');
+        $tag = $mapper->get();
+
+        $tag->name = 'test';
+        $result = $mapper->insert($tag);
+
+        $this->assertTrue($result !== false);
+    }
+
     public function testPostTagUpsert()
     {
         $postMapper = test_spot_mapper('SpotTest\Entity\PostTag');
         $data = [
-            'tag_id' => 2145,
-            'post_id' => 1295
+            'tag_id' => 1,
+            'post_id' => 5
         ];
         $where = [
-            'tag_id' => 2145
+            'tag_id' => 1
         ];
 
         // Posttags has unique constraint on tag+post, so insert will fail the second time
